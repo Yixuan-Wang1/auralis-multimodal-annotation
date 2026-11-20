@@ -6,6 +6,7 @@
   <meta name="description" content="Auralis Studio 专业视听多模态数据清洗与标注平台" />
   <title>Auralis Studio · 视听标注平台</title>
   <link rel="stylesheet" href="./styles.css" />
+  <link rel="stylesheet" href="./api.css" />
 </head>
 <body>
   <div class="app-shell">
@@ -25,7 +26,7 @@
     <main>
       <header class="topbar">
         <div><span class="crumb">项目 / 街景多模态理解 /</span> <b>标注任务 #AT-2048</b></div>
-        <div class="top-actions"><span class="saved">● 已自动保存</span><button class="icon-btn" aria-label="快捷键">⌘</button><button class="icon-btn" aria-label="通知">♢<i></i></button><button class="primary" id="submitTask">提交审核</button></div>
+        <div class="top-actions"><span class="api-state" id="apiState">API 检测中</span><span class="saved">● 已自动保存</span><button class="icon-btn" aria-label="快捷键">⌘</button><button class="icon-btn" aria-label="通知">♢<i></i></button><button class="primary" id="submitTask">提交审核</button></div>
       </header>
 
       <section class="workspace" id="workspaceView">
@@ -87,7 +88,7 @@
         </div>
 
         <section class="pipeline-strip">
-          <div class="pipeline-head"><div><span class="live-dot"></span><b>算法流水线</b><small>实时推理 · GPU A10</small></div><button class="ghost" id="runPipeline">重新运行</button></div>
+          <div class="pipeline-head"><div><span class="live-dot"></span><b>算法流水线</b><small id="datasetMeta">正在连接 G:\avcs 数据集</small></div><button class="ghost" id="runPipeline">运行数据集样本</button></div>
           <div class="pipeline-cards">
             <article><i class="ok">✓</i><span><b>场景清洗</b><small>去重 · 模糊帧 · 黑屏</small></span><em>已完成</em></article>
             <article><i class="ok">✓</i><span><b>目标检测</b><small>YOLOv11 · 12 个目标</small></span><em>已完成</em></article>
@@ -95,6 +96,7 @@
             <article><i>4</i><span><b>音视频对齐</b><small>WhisperX · AV-HuBERT</small></span><em>等待中</em></article>
             <article><i>5</i><span><b>区域描述生成</b><small>多模态大模型</small></span><em>等待中</em></article>
           </div>
+          <pre class="api-result" id="apiResult">等待调用 /api/v1/pipeline/run</pre>
         </section>
       </section>
 
