@@ -1,0 +1,2 @@
+.api-state{font-size:10px;padding:5px 9px;border:1px solid #5d4930;border-radius:12px;color:#dcb978;background:#2a2117}.api-state.online{border-color:#286c62;color:var(--cyan);background:#102d2a}.api-state.offline{border-color:#6f3639;color:#ff8c91;background:#2c1719}.api-result{margin:12px 0 0;max-height:180px;overflow:auto;border:1px solid #1c3744;border-radius:8px;background:#061019;color:#8fd6cb;padding:12px;font:10px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre-wrap}
+
