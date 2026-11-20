@@ -5,6 +5,7 @@ from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, unquote, urlparse
+from PIL import Image
 
 ROOT = Path(__file__).resolve().parent
 DIST = ROOT / "dist"
@@ -30,6 +31,8 @@ class DatasetIndex:
         return json.loads(p.read_text(encoding="utf-8")) if p.exists() else []
     def audio(self, video_id):
         return self.root / "audio_wav" / self.split_for(video_id) / f"{video_id}.wav"
+    def mask(self, video_id, frame):
+        return self.root / "gt_masks" / self.split_for(video_id) / video_id / f"{frame}.png"
 
 INDEX = DatasetIndex(DATASET)
 
@@ -55,15 +58,19 @@ def label_for(text):
 def detection(video_id, frame):
     caption, source = caption_at(video_id, frame)
     files = INDEX.frames(video_id); selected = next((p for p in files if p.stem == str(frame)), files[0] if files else None)
-    w, h = png_size(selected); n = nums(f"{video_id}:{frame}:{caption}")
-    bw, bh = max(40,int(w*(.22+n[0]*.18))), max(40,int(h*(.35+n[1]*.25)))
-    x, y = int(n[2]*max(1,w-bw)), int(n[3]*max(1,h-bh))
-    return {"model":"YOLOv11-adapter","mode":"dataset_replay","video_id":video_id,"frame":frame,"image":{"width":w,"height":h,"url":f"/api/v1/media/frame/{video_id}/{frame}"},"detections":[{"id":"det-001","label":label_for(caption),"score":round(.88+n[4]*.1,4),"bbox_xyxy":[x,y,x+bw,y+bh],"source_caption":caption}],"provenance":{"annotation":source,"derived_from":"caption_annotation"}}
+    w, h = png_size(selected); n = nums(f"{video_id}:{frame}:{caption}"); mask_path=INDEX.mask(video_id,frame); bbox=None
+    if mask_path.exists():
+        with Image.open(mask_path) as mask: bbox=mask.getbbox()
+    if bbox: x,y,x2,y2=bbox
+    else:
+        bw,bh=max(40,int(w*(.22+n[0]*.18))),max(40,int(h*(.35+n[1]*.25)));x,y=int(n[2]*max(1,w-bw)),int(n[3]*max(1,h-bh));x2,y2=x+bw,y+bh
+    geometry="gt_mask_bbox" if bbox else "caption_derived_synthetic_bbox"
+    return {"model":"YOLOv11-adapter","mode":"dataset_replay","video_id":video_id,"frame":frame,"image":{"width":w,"height":h,"url":f"/api/v1/media/frame/{video_id}/{frame}"},"detections":[{"id":"det-001","label":label_for(caption),"score":1.0 if bbox else round(.88+n[4]*.1,4),"bbox_xyxy":[x,y,x2,y2],"source_caption":caption,"geometry_source":geometry}],"provenance":{"annotation":source,"derived_from":"gt_mask+caption" if bbox else "caption_annotation","gt_mask":str(mask_path) if bbox else None}}
 
 def segmentation(video_id, frame, prompt=None):
-    d=detection(video_id,frame); x1,y1,x2,y2=d["detections"][0]["bbox_xyxy"]
-    poly=[[x1+8,y1],[x2-8,y1],[x2,y1+8],[x2,y2-8],[x2-8,y2],[x1+8,y2],[x1,y2-8],[x1,y1+8]]
-    return {"model":"SAM2-adapter","mode":"dataset_replay","video_id":video_id,"frame":frame,"prompt":prompt or {"type":"box","value":[x1,y1,x2,y2]},"masks":[{"id":"mask-001","label":d["detections"][0]["label"],"score":.94,"format":"polygon","polygon":poly}],"provenance":d["provenance"]}
+    d=detection(video_id,frame); bbox=d["detections"][0]["bbox_xyxy"]; mask_path=INDEX.mask(video_id,frame)
+    if not mask_path.exists(): raise FileNotFoundError(f"GT mask missing: {video_id}/{frame}.png")
+    return {"model":"SAM2-adapter","mode":"dataset_replay","video_id":video_id,"frame":frame,"prompt":prompt or {"type":"box","value":bbox},"masks":[{"id":"mask-001","label":d["detections"][0]["label"],"score":1.0,"format":"binary_png","url":f"/api/v1/media/mask/{video_id}/{frame}","bbox_xyxy":bbox,"width":d["image"]["width"],"height":d["image"]["height"]}],"provenance":{"derived_from":"gt_mask","path":str(mask_path)}}
 
 def tracking(video_id,start,end):
     items=[]
@@ -87,7 +94,8 @@ def alignment(video_id,start=None,end=None):
 
 def sample(video_id):
     frames=INDEX.frames(video_id); caps=INDEX.captions(video_id); nonempty=[r for r in caps if r.get("caption")]
-    return {"video_id":video_id,"split":INDEX.split_for(video_id),"frame_count":len(frames),"caption_count":len(nonempty),"audio_available":INDEX.audio(video_id).exists(),"first_frame_url":f"/api/v1/media/frame/{video_id}/{frames[0].stem}" if frames else None,"annotation_preview":nonempty[:3]}
+    first=int(frames[0].stem) if frames else 0
+    return {"video_id":video_id,"split":INDEX.split_for(video_id),"frame_count":len(frames),"caption_count":len(nonempty),"audio_available":INDEX.audio(video_id).exists(),"gt_mask_available":INDEX.mask(video_id,first).exists(),"first_frame_url":f"/api/v1/media/frame/{video_id}/{first}" if frames else None,"first_mask_url":f"/api/v1/media/mask/{video_id}/{first}" if INDEX.mask(video_id,first).exists() else None,"annotation_preview":nonempty[:3]}
 
 def openapi():
     paths={p:{"post":{"summary":s,"responses":{"200":{"description":"Dataset-backed result"}}}} for p,s in {"/api/v1/models/detection/infer":"Object detection","/api/v1/models/segmentation/infer":"Promptable segmentation","/api/v1/models/tracking/infer":"Cross-frame tracking","/api/v1/models/alignment/infer":"Audio-video alignment","/api/v1/models/caption/infer":"Frame caption","/api/v1/pipeline/run":"Full pipeline","/api/v1/annotations/save":"Save revision"}.items()}
@@ -113,12 +121,14 @@ class Handler(SimpleHTTPRequestHandler):
         try:
             if p=="/api/v1/health": return self.send_json({"status":"ok","api_version":API_VERSION,"dataset_root":str(DATASET),"dataset_available":DATASET.exists(),"samples":len(INDEX.samples),"mode":"dataset_replay"})
             if p=="/api/v1/dataset/stats":
-                vals=list(INDEX.samples.values()); return self.send_json({"root":str(DATASET),"samples":len(vals),"splits":{s:vals.count(s) for s in sorted(set(vals))},"modalities":["visual_frames","audio_wav","frame_caption"]})
+                vals=list(INDEX.samples.values()); return self.send_json({"root":str(DATASET),"samples":len(vals),"splits":{s:vals.count(s) for s in sorted(set(vals))},"modalities":["visual_frames","audio_wav","frame_caption","gt_masks"]})
             if p=="/api/v1/samples":
-                split=q.get("split",[None])[0]; limit=min(100,max(1,int(q.get("limit",[12])[0]))); require_frames=q.get("has_frames",["false"])[0].lower()=="true"; ids=[k for k,v in INDEX.samples.items() if split in (None,v) and (not require_frames or bool(INDEX.frames(k)))][:limit]; return self.send_json({"items":[sample(x) for x in ids],"count":len(ids)})
+                split=q.get("split",[None])[0]; limit=min(100,max(1,int(q.get("limit",[12])[0]))); require_frames=q.get("has_frames",["false"])[0].lower()=="true"; require_masks=q.get("has_masks",["false"])[0].lower()=="true"; ids=[k for k,v in INDEX.samples.items() if split in (None,v) and (not require_frames or bool(INDEX.frames(k))) and (not require_masks or (bool(INDEX.frames(k)) and INDEX.mask(k,int(INDEX.frames(k)[0].stem)).exists()))][:limit]; return self.send_json({"items":[sample(x) for x in ids],"count":len(ids)})
             if p.startswith("/api/v1/samples/"): return self.send_json(sample(p.rsplit("/",1)[-1]))
             if p.startswith("/api/v1/media/frame/"):
                 parts=p.split("/"); return self.file(DATASET/"visual_frames"/parts[-2]/f"{int(parts[-1])}.png")
+            if p.startswith("/api/v1/media/mask/"):
+                parts=p.split("/"); return self.file(INDEX.mask(parts[-2],int(parts[-1])))
             if p.startswith("/api/v1/media/audio/"): return self.file(INDEX.audio(p.rsplit("/",1)[-1]))
             if p=="/api/v1/openapi.json": return self.send_json(openapi())
             return super().do_GET()
