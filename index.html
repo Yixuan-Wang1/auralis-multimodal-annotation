@@ -48,6 +48,7 @@
             <div class="panel-head"><div class="tabs task-tabs"><button class="tab active" data-task="detection">检测样本</button><button class="tab" data-task="segmentation">分割样本</button><button class="tab" data-task="tracking">跟踪样本</button><button class="tab" data-task="alignment">对齐样本</button></div><div><button class="ghost small" id="nextSample">换一个样本</button><button class="icon-btn">⛶</button></div></div>
             <div class="video-canvas" id="videoCanvas">
               <img id="datasetFrame" class="dataset-frame" alt="AVCS 数据集真实视频帧" />
+              <img id="datasetMask" class="dataset-mask" alt="AVCS GT 分割掩码" />
               <svg id="datasetOverlay" class="dataset-overlay" preserveAspectRatio="xMidYMid meet" aria-label="数据集标注层"></svg>
               <svg viewBox="0 0 900 500" role="img" aria-label="街头访谈视频标注画面">
                 <defs><linearGradient id="bg" x1="0" x2="1" y1="0" y2="1"><stop stop-color="#10253a"/><stop offset="1" stop-color="#07111d"/></linearGradient><linearGradient id="person" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#71879e"/><stop offset="1" stop-color="#34495d"/></linearGradient></defs>
