@@ -4,7 +4,7 @@
 python server.py --dataset-root G:\avcs --port 8765
 ```
 
-打开 `http://127.0.0.1:8765`。接口为真实 HTTP JSON 契约，但当前不加载模型权重，输出来自 AVCS 的帧、音频与逐帧 caption 标注。
+打开 `http://127.0.0.1:8765`。接口为真实 HTTP JSON 契约，但当前不加载模型权重，输出来自 AVCS 的帧、音频、逐帧 caption 与 `gt_masks` 二值标注。检测框由 GT mask 非零区域的外接矩形计算，分割接口直接返回真实 mask PNG。
 
 | 方法 | 路径 | 用途 |
 |---|---|---|
@@ -18,6 +18,7 @@ python server.py --dataset-root G:\avcs --port 8765
 | POST | `/api/v1/models/caption/infer` | 字幕 |
 | POST | `/api/v1/pipeline/run` | 完整流水线 |
 | POST | `/api/v1/annotations/save` | 保存二次调整 |
+| GET | `/api/v1/media/mask/{video_id}/{frame}` | 读取 GT mask PNG |
 | GET | `/api/v1/openapi.json` | OpenAPI 描述 |
 
 所有推理响应均包含 `mode: dataset_replay` 与 `provenance`。未来接入真实模型时，只需替换 `server.py` 中对应 adapter 函数。
