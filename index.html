@@ -45,10 +45,10 @@
 
         <div class="work-grid">
           <section class="canvas-panel panel">
-            <div class="panel-head"><div class="tabs"><button class="tab active">视频</button><button class="tab">关键帧</button><button class="tab">对比</button></div><div><button class="ghost small" id="toggleMask">隐藏蒙版</button><button class="icon-btn">⛶</button></div></div>
+            <div class="panel-head"><div class="tabs task-tabs"><button class="tab active" data-task="detection">检测样本</button><button class="tab" data-task="segmentation">分割样本</button><button class="tab" data-task="tracking">跟踪样本</button><button class="tab" data-task="alignment">对齐样本</button></div><div><button class="ghost small" id="nextSample">换一个样本</button><button class="icon-btn">⛶</button></div></div>
             <div class="video-canvas" id="videoCanvas">
               <img id="datasetFrame" class="dataset-frame" alt="AVCS 数据集真实视频帧" />
-              <div id="datasetBox" class="dataset-box" hidden><span id="datasetBoxLabel">object</span></div>
+              <svg id="datasetOverlay" class="dataset-overlay" preserveAspectRatio="xMidYMid meet" aria-label="数据集标注层"></svg>
               <svg viewBox="0 0 900 500" role="img" aria-label="街头访谈视频标注画面">
                 <defs><linearGradient id="bg" x1="0" x2="1" y1="0" y2="1"><stop stop-color="#10253a"/><stop offset="1" stop-color="#07111d"/></linearGradient><linearGradient id="person" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#71879e"/><stop offset="1" stop-color="#34495d"/></linearGradient></defs>
                 <rect width="900" height="500" fill="url(#bg)"/><rect y="332" width="900" height="168" fill="#142333"/><path d="M0 327 L176 258 355 326 555 218 900 318V365H0Z" fill="#1a3246"/><circle cx="100" cy="112" r="34" fill="#f2bd68" opacity=".78"/><circle cx="793" cy="93" r="25" fill="#54b8c6" opacity=".4"/>
@@ -57,7 +57,7 @@
                 <g class="mask-layer"><path d="M218 489c5-132 34-209 82-224-40-19-61-67-51-113 11-52 55-88 104-78 52 11 81 67 66 123-8 32-27 56-52 69 80 17 105 114 113 223z" fill="#30d9c4" fill-opacity=".30" stroke="#37ead3" stroke-width="4"/><path d="M528 489c10-129 38-202 87-220-34-19-52-63-41-108 12-52 58-84 105-71 50 14 76 70 59 125-9 29-29 51-53 61 76 25 98 110 107 213z" fill="#a88bff" fill-opacity=".30" stroke="#a88bff" stroke-width="4"/></g>
                 <g class="boxes"><rect x="228" y="75" width="257" height="414" rx="10" fill="none" stroke="#37ead3" stroke-width="3" stroke-dasharray="9 7"/><rect x="530" y="87" width="264" height="402" rx="10" fill="none" stroke="#a88bff" stroke-width="3" stroke-dasharray="9 7"/></g>
               </svg>
-              <div class="tag tag1"><span></span>人物_01 <b>98%</b></div><div class="tag tag2"><span></span>人物_02 <b>96%</b></div><div class="frame-chip">00:01:24:18 · 帧 2034</div>
+              <div class="tag tag1"><span></span>人物_01 <b>98%</b></div><div class="tag tag2"><span></span>人物_02 <b>96%</b></div><div class="frame-chip">00:01:24:18 · 帧 2034</div><div class="task-chip" id="taskChip">检测 · dataset_replay</div>
               <div class="toolrail"><button class="active">↖</button><button>＋</button><button>⌁</button><button>□</button><button>✣</button></div>
             </div>
             <div class="transport"><button>◀</button><button id="playBtn" class="play">▶</button><button>▶</button><b id="timecode">00:01:24:18</b><div class="scrubber"><i></i><span id="playhead"></span></div><small>00:04:12:09</small><button>🔊</button><select><option>1×</option><option>0.5×</option><option>2×</option></select></div>
